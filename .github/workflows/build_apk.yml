@@ -31,7 +31,7 @@ jobs:
       - name: Generate Android folder
         working-directory: oruchat
         run: |
-          flutter create --org in.oruchat --project-name oru_chat --platforms=android /tmp/oru_gen
+          flutter create --org com.oruchat --project-name oru_chat --platforms=android /tmp/oru_gen
           cp -r /tmp/oru_gen/android ./android
 
       - name: Configure Android
