@@ -1,0 +1,33 @@
+name: oru_chat
+description: OruChat - free chat, voice/video calls and stories.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: ^2.9.0
+  flutter_webrtc: ^0.12.0
+  image_picker: ^1.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/brand/icon_legacy.png"
+  adaptive_icon_background: "#5B05E2"
+  adaptive_icon_foreground: "assets/brand/icon_foreground.png"
+  min_sdk_android: 21
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/brand/logo_icon.png
+    - assets/brand/wordmark.png

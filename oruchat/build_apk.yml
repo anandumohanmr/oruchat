@@ -1,0 +1,45 @@
+name: Build OruChat APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.3'
+          channel: stable
+          cache: true
+
+      - name: Android folder undaakkuka
+        run: |
+          flutter create --org in.oruchat --project-name oru_chat --platforms=android /tmp/oru_gen
+          cp -r /tmp/oru_gen/android ./android
+
+      - name: Permissions, name, minSdk maattuka
+        run: dart run tool/patch_android.dart
+
+      - run: flutter pub get
+
+      - name: App icon undaakkuka
+        run: dart run flutter_launcher_icons
+
+      - name: APK build
+        run: flutter build apk --release --no-shrink
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OruChat-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
