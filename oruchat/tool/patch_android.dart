@@ -22,6 +22,8 @@ void main() {
     'BLUETOOTH',
     'BLUETOOTH_CONNECT',
     'VIBRATE',
+    'USE_BIOMETRIC',
+    'USE_FINGERPRINT',
   ];
   final add = StringBuffer();
   for (final p in perms) {
@@ -63,4 +65,20 @@ void main() {
       stdout.writeln('WARNING: minSdk line kandilla in $name');
     }
   }
+
+  // local_auth requires a FragmentActivity on Android.
+  final kotlinRoot = Directory('android/app/src/main/kotlin');
+  if (kotlinRoot.existsSync()) {
+    for (final entity in kotlinRoot.listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('MainActivity.kt')) continue;
+      var source = entity.readAsStringSync();
+      source = source.replaceAll('import io.flutter.embedding.android.FlutterActivity',
+          'import io.flutter.embedding.android.FlutterFragmentActivity');
+      source = source.replaceAll('extends FlutterActivity', 'extends FlutterFragmentActivity');
+      source = source.replaceAll(': FlutterActivity()', ': FlutterFragmentActivity()');
+      entity.writeAsStringSync(source);
+      stdout.writeln('MainActivity configured for biometric authentication.');
+    }
+  }
+
 }

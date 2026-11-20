@@ -7,6 +7,7 @@ import 'config.dart';
 import 'profile_tab.dart';
 import 'stories_tab.dart';
 import 'utils.dart';
+import 'advanced_features.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -39,6 +40,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        actions: [if (tab == 0) IconButton(tooltip: 'Groups', icon: const Icon(Icons.groups_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GroupsPage())))],
         title: Row(
           children: [
             Image.asset('assets/brand/logo_icon.png', width: 32, height: 32),

@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'advanced_features.dart';
 
 import 'config.dart';
 import 'utils.dart';
@@ -72,8 +74,15 @@ class _StoriesTabState extends State<StoriesTab> {
             ? ImageSource.camera
             : ImageSource.gallery;
         setState(() => busy = true);
-        final url = await pickAndUploadImage(source);
-        if (url == null) return;
+        final picked = await ImagePicker().pickImage(source: source, imageQuality: 95);
+        if (picked == null) return;
+        if (!mounted) return;
+        final original = await picked.readAsBytes();
+        final filtered = await Navigator.push<Uint8List>(context, MaterialPageRoute(builder: (_) => StoryFilterPage(bytes: original)));
+        if (filtered == null) return;
+        final path = '$myId/${DateTime.now().microsecondsSinceEpoch}_story.jpg';
+        await sb.storage.from('media').uploadBinary(path, filtered, fileOptions: const FileOptions(contentType: 'image/jpeg'));
+        final url = sb.storage.from('media').getPublicUrl(path);
         if (!mounted) return;
         final caption = await askText(
           context,
