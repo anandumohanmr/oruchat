@@ -59,11 +59,30 @@ void main() {
     final re = RegExp(r'minSdk(Version)?(\s*=\s*|\s+)flutter\.minSdkVersion');
     if (re.hasMatch(s)) {
       s = s.replaceAll(re, kts ? 'minSdk = 24' : 'minSdkVersion 24');
-      f.writeAsStringSync(s);
-      stdout.writeln('$name patched (minSdk 24).');
     } else {
       stdout.writeln('WARNING: minSdk line kandilla in $name');
     }
+
+    // Plugins in the current dependency set require Android NDK 27.
+    if (kts) {
+      if (RegExp(r'ndkVersion\s*=').hasMatch(s)) {
+        s = s.replaceAll(RegExp(r'ndkVersion\s*=\s*[^\n]+'),
+            'ndkVersion = "27.0.12077973"');
+      } else {
+        s = s.replaceFirst(RegExp(r'android\s*\{'),
+            'android {\n    ndkVersion = "27.0.12077973"');
+      }
+    } else {
+      if (RegExp(r'ndkVersion\s+').hasMatch(s)) {
+        s = s.replaceAll(RegExp(r'ndkVersion\s+[^\n]+'),
+            'ndkVersion "27.0.12077973"');
+      } else {
+        s = s.replaceFirst(RegExp(r'android\s*\{'),
+            'android {\n    ndkVersion "27.0.12077973"');
+      }
+    }
+    f.writeAsStringSync(s);
+    stdout.writeln('$name patched (minSdk 24, NDK 27.0.12077973).');
   }
 
   // local_auth requires a FragmentActivity on Android.
