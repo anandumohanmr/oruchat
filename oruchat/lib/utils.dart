@@ -161,6 +161,7 @@ class Avatar extends StatelessWidget {
 /// Profiles Supabase `get_profiles()` function vazhi varunnu (privacy settings anusarichu).
 class ProfileCache {
   static final Map<String, Map<String, dynamic>> _cache = {};
+  static String? lastError;
 
   static Map<String, dynamic>? peek(String id) => _cache[id];
 
@@ -200,7 +201,9 @@ class ProfileCache {
           _cache[m['id'] as String] = m;
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      lastError = errText(e);
+    }
     return {
       for (final i in ids)
         if (_cache[i] != null) i: _cache[i]!,

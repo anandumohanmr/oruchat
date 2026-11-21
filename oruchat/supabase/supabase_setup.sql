@@ -259,25 +259,13 @@ $$;
 -- one-time message: oru thavana mathram thurakkaan, pinne content delete aakum
 create or replace function public.open_once(mid bigint) returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare payload_body text; payload_url text; payload_kind text;
+declare m public.messages%rowtype;
 begin
-  with claimed as (
-    select id, body, media_url, kind
-      from public.messages
-     where id = mid
-       and receiver_id = auth.uid()
-       and once = true
-       and viewed_at is null
-     for update
-  )
-  update public.messages msg
-     set viewed_at = now(), body = null, media_url = null
-    from claimed
-   where msg.id = claimed.id
-  returning claimed.body, claimed.media_url, claimed.kind
-       into payload_body, payload_url, payload_kind;
+  select * into m from public.messages
+   where id = mid and receiver_id = auth.uid() and once = true and viewed_at is null;
   if not found then return null; end if;
-  return jsonb_build_object('body', payload_body, 'media_url', payload_url, 'kind', payload_kind);
+  update public.messages set viewed_at = now(), body = null, media_url = null where id = mid;
+  return jsonb_build_object('body', m.body, 'media_url', m.media_url, 'kind', m.kind);
 end;
 $$;
 
@@ -556,5 +544,75 @@ grant execute on function public.add_group_members(uuid, uuid[]) to authenticate
 grant execute on function public.rename_group(uuid, text) to authenticated;
 grant execute on function public.leave_group(uuid) to authenticated;
 
--- Force PostgREST to refresh its function/column schema cache.
+
+-- 14) v3 FIXES: NO-OTP EMAIL SIGNUP + SAFE PROFILE TRIGGER --------------------
+-- (a) Email confirmation/OTP illa: ella user-um udane confirmed aakum.
+create or replace function public.auto_confirm_email()
+returns trigger language plpgsql security definer set search_path = public, auth as $$
+begin
+  if new.email_confirmed_at is null then
+    new.email_confirmed_at := now();
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists oruchat_auto_confirm on auth.users;
+create trigger oruchat_auto_confirm
+  before insert or update of email_confirmed_at on auth.users
+  for each row execute function public.auto_confirm_email();
+
+-- Munpu signup cheythu confirm aakaathe nilkkunna accounts ellaam fix.
+update auth.users set email_confirmed_at = now() where email_confirmed_at is null;
+
+-- (b) Profile trigger: username clash / thettaaya username ayaalum signup fail aakilla.
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  u text;
+  dn text;
+begin
+  u := lower(coalesce(nullif(new.raw_user_meta_data->>'username', ''), split_part(coalesce(new.email, ''), '@', 1)));
+  u := regexp_replace(u, '[^a-z0-9_]', '_', 'g');
+  if length(u) < 3 then u := 'user_' || left(replace(new.id::text, '-', ''), 6); end if;
+  u := left(u, 20);
+  if exists (select 1 from public.profiles where username = u) then
+    u := left(u, 11) || '_' || left(replace(new.id::text, '-', ''), 8);
+  end if;
+  dn := coalesce(nullif(trim(new.raw_user_meta_data->>'display_name'), ''), split_part(coalesce(new.email, ''), '@', 1), 'OruChat User');
+  insert into public.profiles (id, username, display_name)
+  values (new.id, u, dn)
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+-- (c) Message update: receiver-inu read_at/viewed_at mathram maattaan pattu.
+create or replace function public.messages_guard_update() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is not null and auth.uid() = old.receiver_id and auth.uid() <> old.sender_id then
+    new.body := old.body; new.media_url := old.media_url; new.kind := old.kind;
+    new.sender_id := old.sender_id; new.receiver_id := old.receiver_id;
+    new.chat_id := old.chat_id; new.group_id := old.group_id; new.once := old.once;
+    new.meta := old.meta; new.created_at := old.created_at;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists messages_guard_update_trg on public.messages;
+create trigger messages_guard_update_trg
+  before update on public.messages
+  for each row
+  when (current_user in ('authenticated', 'anon'))
+  execute function public.messages_guard_update();
+
+-- (d) Old call signals clean cheyyaan
+create or replace function public.purge_old_call_signals() returns void
+language sql security definer set search_path = public as $$
+  delete from public.call_signals where created_at < now() - interval '10 minutes';
+$$;
+grant execute on function public.purge_old_call_signals() to authenticated;
+grant execute on function public.purge_expired_messages() to authenticated;
+grant execute on function public.username_available(text) to anon, authenticated;
+
 notify pgrst, 'reload schema';

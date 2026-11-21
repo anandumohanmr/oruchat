@@ -290,8 +290,12 @@ class _FindTabState extends State<_FindTab> {
           ids.add(e.toString());
         }
       }
+      ProfileCache.lastError = null;
       final map = await ProfileCache.getMany(ids);
       if (!mounted || q != lastQuery) return;
+      if (ids.isNotEmpty && map.isEmpty && ProfileCache.lastError != null) {
+        snack(context, 'Could not load profiles: ${ProfileCache.lastError}');
+      }
       setState(() {
         results = [
           for (final id in ids)

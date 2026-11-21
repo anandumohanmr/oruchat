@@ -1,6 +1,18 @@
-# OruChat v2  —  by Oru Design Creative Studio (www.orudesign.in)
+# OruChat v3  —  by Oru Design Creative Studio (www.orudesign.in)
 
-Flutter Android messaging app with a WhatsApp + Snapchat-inspired feature set. Backend: your existing Supabase project. APK build: GitHub Actions.
+## v3-il maattiyath (bug fixes)
+- Signup/login: email + password mathram, OTP/confirm-email venda. SQL-il auto-confirm trigger add cheythu; app signup kazhinju udane login cheyyum. Clear error messages.
+- Profile trigger safe aakki (username clash-il signup fail aakilla).
+- Calls: ICE candidates offer-inu munpe ethunna race fix (calls connect aakathirunnathinte main kaaranam), reconnect status, extra permissions.
+- Messages: receiver-inu read_at mathram maattaan pattu (security).
+- Find people/profile load error ippo screen-il kaanikkum.
+
+## ORU THAVANA CHEYYENDATHU (Supabase dashboard)
+1. SQL Editor -> `oruchat/supabase/supabase_setup.sql` full paste -> RUN (ippozhathe project-il thanne).
+2. Authentication -> Providers -> Email -> **Confirm email = OFF** (Save). Ith OFF aakkiyillenkil Supabase-inte free email limit (2/hour) kaaranam signup error varum.
+3. Pazhaya app uninstall cheythu puthiya APK install cheyyuka.
+
+Free WhatsApp-style Android app. Backend: Supabase (free). APK build: GitHub Actions (free).
 
 ## v2-il ullathu
 Chat, photos, video, voice message, audio/document sharing, location sharing, stickers,
@@ -34,18 +46,6 @@ IMPORTANT: Ellaa phone-ilum puthiya APK install cheyyanam. Pazhaya (v1) app puth
 - Message search filters `messages.once`; the SQL setup adds this column.
 - Profile loading uses `get_profiles(ids)`; the SQL setup creates it and backfills missing profile rows for existing Auth users.
 - These are Supabase database changes. **The SQL must be run in the same Supabase project used by the app.** A new APK alone cannot fix missing database functions or columns.
-
-## OruChat repair package notes
-
-- Signup now validates the email format and gives the correct Supabase setting guidance when `signUp` returns no session. For password-only login (no email OTP/confirmation), set **Authentication -> Providers -> Email -> Confirm email = OFF** in the existing Supabase project. Do not disable password security or expose a service-role key in the app.
-- The `open_once(mid)` database function is updated to claim a one-time message atomically, preventing concurrent opens from returning the same payload twice. Re-run the complete SQL file in the same existing project.
-- The app's Supabase URL and publishable/anon key are currently configured in `lib/config.dart`; these are client-side values. Never place a `service_role` key in Flutter or GitHub client build arguments.
-
-## Required validation before public release
-
-This package is a repaired source baseline, **not a verified production release**. The existing Supabase project is private and cannot be accessed or migrated from this workspace, and this environment does not have the Flutter SDK installed to run `flutter analyze` or build an APK. Build it with the included GitHub Actions workflow, then test with two separate accounts/devices. In particular, confirm signup/login, friend requests, text/media/voice messages, stories, groups, block/privacy rules, and voice/video calls.
-
-Known release blockers/limitations in this codebase: media is stored in a public Supabase Storage bucket (do not upload sensitive/private media); message contents are not end-to-end encrypted; background incoming-call delivery is not implemented; public/free TURN relay availability is not guaranteed; screenshot prevention/notification cannot be guaranteed on Android; and the SQL scheduled cleanup depends on `pg_cron` being available. Do not advertise these as secure or fully reliable until independently implemented and tested.
 
 ## Ariyendath
 - Database-side fixes are included in the SQL, but I cannot connect to your private Supabase project from here to run it or verify live data. After running the SQL, test the items above on two accounts.

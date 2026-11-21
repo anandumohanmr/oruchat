@@ -31,10 +31,27 @@ class _AuthPageState extends State<AuthPage> {
     super.dispose();
   }
 
+  String _friendlyAuthError(AuthException ex) {
+    final m = ex.message.toLowerCase();
+    if (m.contains('email not confirmed')) {
+      return 'Email is not confirmed yet. In Supabase: Authentication > Providers > Email > turn OFF "Confirm email", then run the latest supabase_setup.sql.';
+    }
+    if (m.contains('rate limit')) {
+      return 'Too many emails sent. In Supabase turn OFF "Confirm email" (Authentication > Providers > Email), then try again.';
+    }
+    if (m.contains('invalid login')) {
+      return 'Wrong email or password.';
+    }
+    if (m.contains('already registered')) {
+      return 'This email is already registered. Please log in.';
+    }
+    return ex.message;
+  }
+
   Future<void> submit() async {
     final e = email.text.trim();
     final p = password.text;
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(e) || p.length < 6) {
+    if (e.isEmpty || p.length < 6) {
       snack(
         context,
         'Enter a valid email and a password of at least 6 characters.',
@@ -69,22 +86,16 @@ class _AuthPageState extends State<AuthPage> {
           password: p,
           data: {'username': u, 'display_name': n},
         );
-        if (res.session == null && mounted) {
-          // With Supabase email confirmation disabled, signUp normally returns
-          // a session immediately. A null session usually means confirmation
-          // is still enabled (or the project requires an additional step).
-          snack(
-            context,
-            'No login session was returned. In Supabase, open Authentication '
-            ' > Providers > Email and turn OFF Confirm email, then try again.',
-          );
-          setState(() => signup = false);
+        if (res.session == null) {
+          // Email OTP/confirmation venda: server (SQL trigger) email auto-confirm
+          // cheyyunnu, athinal udane login cheyyaam.
+          await sb.auth.signInWithPassword(email: e, password: p);
         }
       } else {
         await sb.auth.signInWithPassword(email: e, password: p);
       }
     } on AuthException catch (ex) {
-      if (mounted) snack(context, ex.message);
+      if (mounted) snack(context, _friendlyAuthError(ex));
     } catch (ex) {
       if (mounted) snack(context, 'Something went wrong: $ex');
     } finally {

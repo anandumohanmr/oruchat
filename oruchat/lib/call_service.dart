@@ -43,6 +43,8 @@ class CallSession {
   MediaStream? _local;
   final List<Map<String, dynamic>> _candidates = [];
   bool _remoteSet = false;
+  bool _offerSent = false;
+  final List<Map<String, dynamic>> _outCandidates = [];
   bool _renderersReady = false;
   bool _logged = false;
   bool _disposed = false;
@@ -73,11 +75,17 @@ class CallSession {
 
     pc.onIceCandidate = (RTCIceCandidate c) {
       if (c.candidate == null) return;
-      _send('candidate', {
+      final Map<String, dynamic> cand = {
         'candidate': c.candidate,
         'sdpMid': c.sdpMid,
         'sdpMLineIndex': c.sdpMLineIndex,
-      });
+      };
+      // Caller: offer ethuvare ayakkaathe candidates ayakkaruthu (order thettum).
+      if (isCaller && !_offerSent) {
+        _outCandidates.add(cand);
+      } else {
+        _send('candidate', cand);
+      }
     };
 
     pc.onTrack = (RTCTrackEvent e) {
@@ -90,6 +98,8 @@ class CallSession {
       if (s == RTCIceConnectionState.RTCIceConnectionStateConnected ||
           s == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
         _onConnected();
+      } else if (s == RTCIceConnectionState.RTCIceConnectionStateDisconnected) {
+        if (connected.value && !ended.value) status.value = 'Reconnecting…';
       } else if (s == RTCIceConnectionState.RTCIceConnectionStateFailed) {
         _finish(
           'Connection failed',
@@ -126,6 +136,12 @@ class CallSession {
         'type': offerDesc.type,
         'video': video,
       });
+      _offerSent = true;
+      final queued = List<Map<String, dynamic>>.from(_outCandidates);
+      _outCandidates.clear();
+      for (final c in queued) {
+        await _send('candidate', c);
+      }
       status.value = 'Ringing…';
       _ringTimer = Timer(const Duration(seconds: 45), () {
         if (!connected.value && !ended.value) hangup(unanswered: true);
@@ -391,7 +407,7 @@ class CallService {
     if (callId.isEmpty || from.isEmpty) return;
 
     if (type == 'offer') {
-      if (_sessions.containsKey(callId) || _early.containsKey(callId)) return;
+      if (_sessions.containsKey(callId)) return;
       if (busy) {
         try {
           await sb.from('call_signals').insert({
@@ -404,7 +420,7 @@ class CallService {
         } catch (_) {}
         return;
       }
-      _early[callId] = [];
+      _early.putIfAbsent(callId, () => []);
       final prof = await ProfileCache.get(from);
       final s = CallSession(
         callId: callId,
@@ -429,6 +445,9 @@ class CallService {
     final existing = _sessions[callId];
     if (existing != null) {
       existing.handle(type, payload);
+    } else if (type == 'candidate') {
+      // Offer-inu munpe vannaal pidichu vekkum.
+      _early.putIfAbsent(callId, () => []).add({'type': type, 'payload': payload});
     } else {
       _early[callId]?.add({'type': type, 'payload': payload});
     }
