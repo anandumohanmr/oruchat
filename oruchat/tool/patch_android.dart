@@ -73,10 +73,27 @@ void main() {
     final re = RegExp(r'minSdk(Version)?(\s*=\s*|\s+)flutter\.minSdkVersion');
     if (re.hasMatch(s)) {
       s = s.replaceAll(re, kts ? 'minSdk = 24' : 'minSdkVersion 24');
-      f.writeAsStringSync(s);
-      stdout.writeln('$name patched (minSdk 24).');
     } else {
       stdout.writeln('WARNING: minSdk line kandilla in $name');
     }
+
+    // Keep all Android plugins on the NDK version required by the project plugins.
+    if (kts) {
+      final ndkRe = RegExp(r'ndkVersion\s*=\s*(flutter\.ndkVersion|"[^"]*")');
+      if (ndkRe.hasMatch(s)) {
+        s = s.replaceAll(ndkRe, 'ndkVersion = "27.0.12077973"');
+      } else if (s.contains('android {')) {
+        s = s.replaceFirst('android {', 'android {\n    ndkVersion = "27.0.12077973"');
+      }
+    } else {
+      final ndkRe = RegExp(r'ndkVersion\s+(flutter\.ndkVersion|"[^"]*")');
+      if (ndkRe.hasMatch(s)) {
+        s = s.replaceAll(ndkRe, 'ndkVersion "27.0.12077973"');
+      } else if (s.contains('android {')) {
+        s = s.replaceFirst('android {', 'android {\n    ndkVersion "27.0.12077973"');
+      }
+    }
+    f.writeAsStringSync(s);
+    stdout.writeln('$name patched (minSdk 24, NDK 27.0.12077973).');
   }
 }
