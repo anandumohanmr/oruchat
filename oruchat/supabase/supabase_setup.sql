@@ -259,13 +259,25 @@ $$;
 -- one-time message: oru thavana mathram thurakkaan, pinne content delete aakum
 create or replace function public.open_once(mid bigint) returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare m public.messages%rowtype;
+declare payload_body text; payload_url text; payload_kind text;
 begin
-  select * into m from public.messages
-   where id = mid and receiver_id = auth.uid() and once = true and viewed_at is null;
+  with claimed as (
+    select id, body, media_url, kind
+      from public.messages
+     where id = mid
+       and receiver_id = auth.uid()
+       and once = true
+       and viewed_at is null
+     for update
+  )
+  update public.messages msg
+     set viewed_at = now(), body = null, media_url = null
+    from claimed
+   where msg.id = claimed.id
+  returning claimed.body, claimed.media_url, claimed.kind
+       into payload_body, payload_url, payload_kind;
   if not found then return null; end if;
-  update public.messages set viewed_at = now(), body = null, media_url = null where id = mid;
-  return jsonb_build_object('body', m.body, 'media_url', m.media_url, 'kind', m.kind);
+  return jsonb_build_object('body', payload_body, 'media_url', payload_url, 'kind', payload_kind);
 end;
 $$;
 

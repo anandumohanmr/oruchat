@@ -34,7 +34,7 @@ class _AuthPageState extends State<AuthPage> {
   Future<void> submit() async {
     final e = email.text.trim();
     final p = password.text;
-    if (e.isEmpty || p.length < 6) {
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(e) || p.length < 6) {
       snack(
         context,
         'Enter a valid email and a password of at least 6 characters.',
@@ -70,9 +70,13 @@ class _AuthPageState extends State<AuthPage> {
           data: {'username': u, 'display_name': n},
         );
         if (res.session == null && mounted) {
+          // With Supabase email confirmation disabled, signUp normally returns
+          // a session immediately. A null session usually means confirmation
+          // is still enabled (or the project requires an additional step).
           snack(
             context,
-            'Account created. Please confirm your email, then log in.',
+            'No login session was returned. In Supabase, open Authentication '
+            ' > Providers > Email and turn OFF Confirm email, then try again.',
           );
           setState(() => signup = false);
         }
