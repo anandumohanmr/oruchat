@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config.dart';
+import 'legal_pages.dart';
 import 'utils.dart';
 
 class AuthPage extends StatefulWidget {
@@ -15,6 +16,7 @@ class _AuthPageState extends State<AuthPage> {
   bool signup = false;
   bool busy = false;
   bool hide = true;
+  bool agreed = false;
   final name = TextEditingController();
   final username = TextEditingController();
   final email = TextEditingController();
@@ -37,6 +39,10 @@ class _AuthPageState extends State<AuthPage> {
         context,
         'Enter a valid email and a password of at least 6 characters.',
       );
+      return;
+    }
+    if (signup && !agreed) {
+      snack(context, 'Please accept the Terms & Conditions to continue.');
       return;
     }
     setState(() => busy = true);
@@ -155,7 +161,40 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  if (signup)
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: agreed,
+                          activeColor: purple,
+                          onChanged: (v) => setState(() => agreed = v == true),
+                        ),
+                        Expanded(
+                          child: Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              const Text('I agree to the '),
+                              GestureDetector(
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const TermsPage(),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Terms & Conditions',
+                                  style: TextStyle(
+                                    color: purple,
+                                    fontWeight: FontWeight.w700,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 16),
                   FilledButton(
                     onPressed: busy ? null : submit,
                     style: FilledButton.styleFrom(
@@ -185,6 +224,12 @@ class _AuthPageState extends State<AuthPage> {
                           ? 'Already have an account? Log in'
                           : 'New here? Create an account',
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'by ${AppInfo.studioName}',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.black38, fontSize: 12),
                   ),
                 ],
               ),

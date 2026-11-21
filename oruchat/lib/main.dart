@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'auth_page.dart';
 import 'config.dart';
 import 'home_page.dart';
+import 'lock_service.dart';
 import 'utils.dart';
 
 Future<void> main() async {
@@ -12,6 +13,7 @@ Future<void> main() async {
     url: AppConfig.supabaseUrl,
     anonKey: AppConfig.supabaseKey,
   );
+  await LockService.instance.load();
   runApp(const OruChatApp());
 }
 

@@ -443,6 +443,22 @@ class CallService {
       snack(context, 'You are already on a call.');
       return;
     }
+    // Friends thammil mathram call cheyyaan pattu.
+    final fresh = await ProfileCache.get(peer['id'] as String, fresh: true);
+    if (fresh['blocked_by_me'] == true || fresh['blocked_me'] == true) {
+      if (context.mounted) snack(context, 'You cannot call this person.');
+      return;
+    }
+    if (fresh['friend_status'] != 'friends') {
+      if (context.mounted) {
+        snack(
+          context,
+          'Calls are only for friends. Send a friend request first.',
+        );
+      }
+      return;
+    }
+    if (!context.mounted) return;
     final s = CallSession(
       callId:
           '${DateTime.now().microsecondsSinceEpoch}_${myId.substring(0, 8)}',

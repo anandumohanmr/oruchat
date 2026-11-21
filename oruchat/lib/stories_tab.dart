@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'advanced_features.dart';
 
 import 'config.dart';
+import 'filters.dart';
 import 'utils.dart';
 
 bool _isActive(Map<String, dynamic> s) {
@@ -74,32 +72,26 @@ class _StoriesTabState extends State<StoriesTab> {
         final source = choice == 'camera'
             ? ImageSource.camera
             : ImageSource.gallery;
+        final bytes = await pickImageBytes(source);
+        if (bytes == null || !mounted) return;
+        final r = await editImage(context, bytes, actionLabel: 'Post');
+        if (r == null) return;
         setState(() => busy = true);
-        final picked = await ImagePicker().pickImage(source: source, imageQuality: 95);
-        if (picked == null) return;
-        if (!mounted) return;
-        final original = await picked.readAsBytes();
-        final filtered = await Navigator.push<Uint8List>(context, MaterialPageRoute(builder: (_) => StoryFilterPage(bytes: original)));
-        if (filtered == null) return;
-        final path = '$myId/${DateTime.now().microsecondsSinceEpoch}_story.jpg';
-        await sb.storage.from('media').uploadBinary(path, filtered, fileOptions: const FileOptions(contentType: 'image/jpeg'));
-        final url = sb.storage.from('media').getPublicUrl(path);
-        if (!mounted) return;
-        final caption = await askText(
-          context,
-          title: 'Add a caption (optional)',
-          hint: 'Caption',
+        final url = await uploadBytes(
+          r.bytes,
+          r.isPng ? 'png' : 'jpg',
+          contentType: r.isPng ? 'image/png' : 'image/jpeg',
         );
         await sb.from('stories').insert({
           'user_id': myId,
           'kind': 'image',
           'media_url': url,
-          'caption': (caption == null || caption.isEmpty) ? null : caption,
+          'caption': r.caption,
         });
       }
       if (mounted) snack(context, 'Story posted');
     } catch (e) {
-      if (mounted) snack(context, 'Could not post story: $e');
+      if (mounted) snack(context, 'Could not post story: ${errText(e)}');
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -155,17 +147,13 @@ class _StoriesTabState extends State<StoriesTab> {
                     url: me?['avatar_url'] as String?,
                     radius: 26,
                   ),
-                  Positioned(
+                  const Positioned(
                     right: 0,
                     bottom: 0,
                     child: CircleAvatar(
                       radius: 10,
                       backgroundColor: purple,
-                      child: const Icon(
-                        Icons.add,
-                        size: 14,
-                        color: Colors.white,
-                      ),
+                      child: Icon(Icons.add, size: 14, color: Colors.white),
                     ),
                   ),
                 ],
@@ -310,7 +298,7 @@ class _StoryViewerPageState extends State<StoryViewerPage> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        snack(context, 'Could not delete: $e');
+        snack(context, 'Could not delete: ${errText(e)}');
         _startTimer();
       }
     }

@@ -30,3 +30,11 @@ final GlobalKey<NavigatorState> navKey = GlobalKey<NavigatorState>();
 
 SupabaseClient get sb => Supabase.instance.client;
 String get myId => sb.auth.currentUser!.id;
+
+class AppInfo {
+  static const String appName = 'OruChat';
+  static const String version = '2.0.0';
+  static const String studioName = 'Oru Design Creative Studio';
+  static const String studioSite = 'https://www.orudesign.in';
+  static const String upiId = 'ananduaman1-1@oksbi';
+}
