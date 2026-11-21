@@ -15,8 +15,10 @@ Terms & Conditions, About (Oru Design Creative Studio), Support (UPI + QR).
 ### 1) Supabase  (MUKHYAM - aadyam ith cheyyanam)
 1. supabase.com -> project -> **SQL Editor -> New query**.
 2. `oruchat/supabase/supabase_setup.sql` full copy -> paste -> **RUN**. "Success" varanam.
-   (V1 munpu run cheythittundenkilum safe aanu; puthiya tables/functions add aakum.)
-3. Authentication -> Email -> "Confirm email" OFF aayirikkanam (munpu cheythittundenkil veendum venda).
+   **Ithu existing Supabase project-il veendum RUN cheyyanam.** App update mathram cheythaal RPC/column errors maarilla.
+3. SQL run kazhinju Supabase-il 1-2 minutes wait cheyyuka; app close cheythu reopen cheyyuka.
+4. `public.messages` table-il `once` column undennum, Database -> Functions-il `search_profile_ids`, `change_username`, `get_profiles` undennum verify cheyyuka.
+5. Authentication -> Email -> "Confirm email" OFF aayirikkanam (munpu cheythittundenkil veendum venda).
 
 ### 2) GitHub
 1. Ee zip extract cheyyuka.
@@ -26,7 +28,15 @@ Terms & Conditions, About (Oru Design Creative Studio), Support (UPI + QR).
 
 IMPORTANT: Ellaa phone-ilum puthiya APK install cheyyanam. Pazhaya (v1) app puthiya database-umayi work cheyyilla.
 
+## Current bug-fix notes
+- Find people uses `search_profile_ids(q)`; the SQL setup now creates it.
+- Username editing uses `change_username(new_username)`; the SQL setup now creates it.
+- Message search filters `messages.once`; the SQL setup adds this column.
+- Profile loading uses `get_profiles(ids)`; the SQL setup creates it and backfills missing profile rows for existing Auth users.
+- These are Supabase database changes. **The SQL must be run in the same Supabase project used by the app.** A new APK alone cannot fix missing database functions or columns.
+
 ## Ariyendath
+- Database-side fixes are included in the SQL, but I cannot connect to your private Supabase project from here to run it or verify live data. After running the SQL, test the items above on two accounts.
 - Compile cheythu test cheythittilla. First build-il error vannaal log text ayachu tharoo.
 - Notification / call ring: app close aayirikkumbol varilla (Firebase venam).
 - Calls: friends thammil mathram. Free TURN server aanu -> chila networks-il connect aavilla.

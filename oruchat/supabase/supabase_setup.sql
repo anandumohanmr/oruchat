@@ -509,3 +509,40 @@ create policy "media upload own folder" on storage.objects for insert to authent
 drop policy if exists "media delete own" on storage.objects;
 create policy "media delete own" on storage.objects for delete to authenticated
   using (bucket_id = 'media' and (storage.foldername(name))[1] = auth.uid()::text);
+
+
+-- 13) EXISTING ACCOUNT REPAIR + RPC PERMISSIONS -------------------------------
+-- Older accounts created before the profile trigger existed may not have a
+-- matching public.profiles row. Create one without changing existing profiles.
+insert into public.profiles (id, username, display_name)
+select
+  u.id,
+  left(
+    coalesce(
+      nullif(regexp_replace(lower(split_part(coalesce(u.email, ''), '@', 1)), '[^a-z0-9_]', '_', 'g'), ''),
+      'user'
+    ),
+    11
+  ) || '_' || left(replace(u.id::text, '-', ''), 8),
+  coalesce(
+    nullif(trim(u.raw_user_meta_data->>'display_name'), ''),
+    nullif(split_part(coalesce(u.email, ''), '@', 1), ''),
+    'OruChat User'
+  )
+from auth.users u
+left join public.profiles p on p.id = u.id
+where p.id is null
+on conflict (id) do nothing;
+
+-- Explicitly expose the RPCs used by the Android client to signed-in users.
+grant execute on function public.get_profiles(uuid[]) to authenticated;
+grant execute on function public.search_profile_ids(text) to authenticated;
+grant execute on function public.change_username(text) to authenticated;
+grant execute on function public.open_once(bigint) to authenticated;
+grant execute on function public.create_group(text, uuid[]) to authenticated;
+grant execute on function public.add_group_members(uuid, uuid[]) to authenticated;
+grant execute on function public.rename_group(uuid, text) to authenticated;
+grant execute on function public.leave_group(uuid) to authenticated;
+
+-- Force PostgREST to refresh its function/column schema cache.
+notify pgrst, 'reload schema';
